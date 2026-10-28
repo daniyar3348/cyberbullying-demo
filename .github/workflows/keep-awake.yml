@@ -1,0 +1,33 @@
+# Сервер на бесплатном железе Hugging Face засыпает после 48 часов без запросов.
+# Запрос раз в 6 часов не дает ему уснуть; если сервер не ответил, запуск падает и GitHub присылает письмо.
+name: Keep Space awake
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the Space
+        run: |
+          # Спящий сервер просыпается от первого запроса, поэтому ждем до 5 минут, пока модель загрузится
+          for i in $(seq 1 10); do
+            status=$(curl -s --max-time 30 https://daniyar51-cyberbullying-detector.hf.space/api/status | jq -r .status) || true
+            echo "attempt $i: ${status:-no answer}"
+            [ "$status" = ready ] && exit 0
+            sleep 30
+          done
+          exit 1
+
+      # GitHub отключает расписание в публичном репозитории после 60 дней без коммитов; повторное включение это предотвращает
+      - name: Keep the schedule enabled
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/keep-awake.yml/enable"
