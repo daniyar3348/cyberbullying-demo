@@ -1,0 +1,19 @@
+{
+ "csv": "../Dataset/cyberbullying_tweets.csv",
+ "text_col": "tweet_text",
+ "label_col": "cyberbullying_type",
+ "epochs": 2,
+ "batch_size": 32,
+ "lr_bert": 2e-05,
+ "lr_head": 0.0001,
+ "val_frac": 0.1,
+ "test_frac": 0.1,
+ "seed": 42,
+ "limit": 0,
+ "max_steps": 0,
+ "encoder": "bert-base-uncased",
+ "max_len": 128,
+ "device": "mps",
+ "n_texts": 44255,
+ "minutes": 67.6
+}

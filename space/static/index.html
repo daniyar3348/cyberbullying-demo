@@ -62,6 +62,25 @@
   dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 16px 0 0; font-size: 14px; }
   dt { color: var(--muted); } dd { margin: 0; word-break: break-word; }
   .error { color: var(--bad); font-size: 14px; margin-top: 10px; }
+  .explain { margin: 16px 0 0; font-size: 15px; }
+  .marked-label { color: var(--muted); font-size: 13px; margin: 16px 0 6px; }
+  .marked { white-space: pre-wrap; word-break: break-word; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 14px; }
+  mark { background: var(--bad-bg); color: var(--bad); border-radius: 4px; padding: 0 2px; }
+  .meter .ghost { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1px; background: var(--text); opacity: .35; transition: left .4s ease; }
+  .words-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 18px 0 6px; }
+  .words-head .marked-label { margin: 0; }
+  .legend { color: var(--muted); font-size: 12px; display: flex; gap: 12px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+  .words { white-space: pre-wrap; word-break: break-word; line-height: 2.1; font-size: 15px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 8px 12px; }
+  .w { font: inherit; font-weight: 500; padding: 2px 4px; margin: 0; border: none; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; transition: opacity .2s; }
+  .w:hover, .w:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+  .w.off { text-decoration: line-through; opacity: .4; }
+  .w.ign { color: var(--muted); cursor: help; }
+  .word-info { color: var(--muted); font-size: 13px; margin-top: 8px; min-height: 20px; }
+  .whatif { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; font-size: 14px; }
+  .whatif button { padding: 5px 12px; font-size: 13px; }
+  #sw-up { background: color-mix(in srgb, var(--bad) 55%, transparent); }
+  #sw-down { background: color-mix(in srgb, var(--ok) 55%, transparent); }
   footer { color: var(--muted); font-size: 13px; }
   .hidden { display: none; }
   @media (max-width: 520px) { .pct { font-size: 36px; } .cls { grid-template-columns: 1fr 60px; } .cls .bar { grid-column: 1 / -1; grid-row: 2; } }
@@ -72,9 +91,9 @@
   <header>
     <div>
       <h1>Детектор кибербуллинга</h1>
-      <p class="sub">Демо гибридной модели BERT + Multihead Self-Attention + CNN · проект AP23488900</p>
+      <p class="sub" id="subtitle">Гибридная модель BERT + Multihead Self-Attention + CNN · проект AP23488900</p>
     </div>
-    <div id="status" class="pill loading"><span class="dot"></span><span id="status-text">Загрузка модели…</span></div>
+    <div id="status" class="pill loading"><span class="dot"></span><span id="status-text">Подключение…</span></div>
   </header>
 
   <div id="banner" class="banner hidden">
@@ -92,10 +111,14 @@
     </div>
     <div class="examples">
       <span>Примеры:</span>
-      <button class="chip">You are so stupid, nobody here likes you</button>
-      <button class="chip">Great job on the presentation today!</button>
-      <button class="chip">Delete your account, loser. Everyone laughs at you</button>
-      <button class="chip">Happy birthday, have an amazing day!</button>
+      <button class="chip" data-lang="kk">Сен ақымақсың, сені ешкім жақсы көрмейді</button>
+      <button class="chip" data-lang="kk">Бүгін сабақ қызықты болды, рахмет!</button>
+      <button class="chip" data-lang="ru">Удали аккаунт, неудачник. Над тобой все смеются</button>
+      <button class="chip" data-lang="ru">Поздравляю с победой на олимпиаде!</button>
+      <button class="chip" data-lang="en">You are so stupid, nobody here likes you</button>
+      <button class="chip" data-lang="en">Great job on the presentation today!</button>
+      <button class="chip" data-lang="en">Delete your account, loser. Everyone laughs at you</button>
+      <button class="chip" data-lang="en">Happy birthday, have an amazing day!</button>
     </div>
     <div id="error" class="error hidden"></div>
   </section>
@@ -103,18 +126,29 @@
   <section id="result" class="card hidden">
     <div class="result-head">
       <div>
-        <div class="sub">Вероятность кибербуллинга</div>
+        <div id="pct-label" class="sub">Вероятность кибербуллинга</div>
         <div id="pct" class="pct">—</div>
       </div>
       <div id="verdict" class="verdict"></div>
     </div>
-    <div class="meter"><div id="fill" class="fill"></div><div id="tick" class="tick"></div></div>
+    <div class="meter"><div id="fill" class="fill"></div><div id="tick" class="tick"></div><div id="ghost" class="ghost hidden" title="Оценка исходного текста"></div></div>
     <div class="scale"><span>0%</span><span id="thr-label">порог 50%</span><span>100%</span></div>
+    <div id="words-wrap" class="hidden">
+      <div class="words-head">
+        <span class="marked-label">Влияние слов на оценку</span>
+        <span class="legend"><span><i id="sw-up"></i>повышает</span><span><i id="sw-down"></i>понижает</span></span>
+      </div>
+      <div id="words" class="words"></div>
+      <div id="word-info" class="word-info"></div>
+      <div id="whatif" class="whatif hidden"><span id="whatif-text"></span><button id="restore" type="button">Вернуть все слова</button></div>
+    </div>
+    <p id="explain" class="explain hidden"></p>
     <div id="classes" class="classes"></div>
-    <dl>
-      <dt>После предобработки</dt><dd id="clean"></dd>
-      <dt>Токенов</dt><dd id="tokens"></dd>
-    </dl>
+    <dl id="details"></dl>
+    <div id="marked-wrap" class="hidden">
+      <div class="marked-label">Фрагменты с признаками кибербуллинга</div>
+      <div id="marked" class="marked"></div>
+    </div>
   </section>
 
   <footer id="footer">Архитектура: BERT → Multihead Self-Attention → 2 × Conv1D + ReLU → Max Pooling → Dropout → Linear + ReLU → Linear.</footer>
@@ -123,7 +157,10 @@
 <script>
 const $ = id => document.getElementById(id);
 const text = $('text'), checkBtn = $('check');
-let ready = false, threshold = 0.5, maxLen = 128;
+let ready = false, threshold = 0.5, maxLen = 128, sentText = '';
+let orig = null, segments = [], whatIfTimer = 0, whatIfSeq = 0;
+const removed = new Set();
+const WORD_HINT = 'Наведите на слово, чтобы увидеть его вклад, или нажмите, чтобы убрать его и пересчитать оценку.';
 const API = (document.querySelector('meta[name="api-base"]').content || '').replace(/\/$/, '');
 
 function setStatus(cls, label) {
@@ -134,13 +171,29 @@ function setStatus(cls, label) {
 async function pollStatus() {
   try {
     const s = await (await fetch(API + '/api/status')).json();
-    threshold = s.threshold; maxLen = s.max_len;
-    if (s.status === 'loading') { setStatus('loading', 'Загрузка модели…'); return setTimeout(pollStatus, 1500); }
-    if (s.status === 'error') { setStatus('bad', 'Ошибка загрузки'); return showError(s.error); }
+    threshold = s.threshold; maxLen = s.max_len || maxLen;
+    if (s.status === 'loading') { setStatus('loading', 'Загрузка…'); return setTimeout(pollStatus, 1500); }
+    if (s.status === 'error') { setStatus('bad', s.engine === 'claude' ? 'Нет доступа к API' : 'Ошибка загрузки'); return showError(s.error); }
     ready = true;
-    setStatus(s.trained ? 'ok' : 'warn', s.trained ? 'Модель обучена' : 'Демо-режим: модель не обучена');
-    $('banner').classList.toggle('hidden', s.trained);
-    $('footer').textContent += ` Энкодер: ${s.encoder}, длина входа: ${s.max_len} токенов, классы: ${s.classes.join(', ')}.`;
+    if (s.engine === 'claude') {
+      setStatus('ok', 'Claude API · ' + s.model);
+      $('subtitle').textContent = 'Автоматическое обнаружение кибербуллинга в сообщениях на казахском, русском и английском языках · проект AP23488900';
+      $('footer').textContent = `Анализ выполняет модель ${s.model} через Anthropic API. Текст отправляется на анализ и не сохраняется на этом сервере.`;
+    } else {
+      setStatus(s.trained ? 'ok' : 'warn', s.trained ? 'Модель обучена' : 'Демо-режим: модель не обучена');
+      $('banner').classList.toggle('hidden', s.trained);
+      $('footer').textContent += ` Энкодер: ${s.encoder}, длина входа: ${s.max_len} токенов, классы: ${s.classes.join(', ')}.`;
+      if (s.training) {
+        const pctStr = v => (v * 100).toFixed(1).replace('.', ',') + '%';
+        $('footer').textContent += ` Обучена на наборе ${s.training.dataset} (${s.training.n_texts} текстов); точность на тестовой выборке ${pctStr(s.training.test_accuracy)}` +
+          (s.training.binary_f1 ? `, F1 «кибербуллинг / нет» ${pctStr(s.training.binary_f1)}.` : '.');
+      }
+      // Англоязычный энкодер: казахские и русские примеры скрываем, чтобы не вводить в заблуждение
+      if (s.encoder === 'bert-base-uncased') {
+        document.querySelectorAll('.chip[data-lang]').forEach(b => { b.hidden = b.dataset.lang !== 'en'; });
+        $('footer').textContent += ' Модель обучена на англоязычных текстах: сообщения на казахском и русском языках она пока распознает неверно.';
+      }
+    }
     updateButton();
   } catch (e) {
     // Бесплатный сервер на Hugging Face засыпает при простое, первый запуск занимает до минуты
@@ -161,14 +214,38 @@ function updateButton() {
 
 const pct = p => (p * 100).toFixed(1).replace('.', ',') + '%';
 
+// Подсветка фрагментов в исходном тексте без вставки HTML из ответа
+function markFragments(container, src, fragments) {
+  const lower = src.toLowerCase(), ranges = [];
+  for (const f of fragments) {
+    const needle = f.trim().toLowerCase();
+    if (!needle) continue;
+    for (let i = lower.indexOf(needle); i >= 0; i = lower.indexOf(needle, i + needle.length)) ranges.push([i, i + needle.length]);
+  }
+  ranges.sort((a, b) => a[0] - b[0]);
+  container.textContent = '';
+  let pos = 0;
+  for (const [start, end] of ranges) {
+    if (end <= pos) continue;
+    const from = Math.max(start, pos);
+    container.append(src.slice(pos, from));
+    const m = document.createElement('mark');
+    m.textContent = src.slice(from, end);
+    container.append(m);
+    pos = end;
+  }
+  container.append(src.slice(pos));
+  return ranges.length > 0;
+}
+
 function color(p) {
   // зелёный → жёлтый → красный
   const hue = Math.round(140 * (1 - p));
   return `hsl(${hue} 70% 45%)`;
 }
 
-function render(r) {
-  $('result').classList.remove('hidden');
+// Оценка, вердикт, классы и детали: для исходного текста и для текста с убранными словами
+function renderScore(r) {
   $('pct').textContent = pct(r.probability);
   $('fill').style.width = (r.probability * 100) + '%';
   $('fill').style.background = color(r.probability);
@@ -179,7 +256,7 @@ function render(r) {
   else if (r.is_cyberbullying) { v.className = 'verdict bad'; v.textContent = 'Есть признаки кибербуллинга'; }
   else { v.className = 'verdict ok'; v.textContent = 'Признаков кибербуллинга не обнаружено'; }
   $('classes').innerHTML = '';
-  if (r.classes.length > 2) {
+  if (r.classes && r.classes.length > 2) {
     for (const c of [...r.classes].sort((a, b) => b.probability - a.probability)) {
       const row = document.createElement('div');
       row.className = 'cls';
@@ -188,13 +265,122 @@ function render(r) {
       $('classes').appendChild(row);
     }
   }
-  $('clean').textContent = r.clean_text || '(пусто после очистки)';
-  $('tokens').textContent = `${r.tokens} из ${maxLen}` + (r.truncated ? ' (текст обрезан)' : '');
+  $('explain').textContent = r.explanation || '';
+  $('explain').classList.toggle('hidden', !r.explanation);
+  const rows = [];
+  if (r.category) rows.push(['Тип', r.category]);
+  if (r.severity) rows.push(['Степень тяжести', r.severity]);
+  if (r.language) rows.push(['Язык', r.language]);
+  if (r.clean_text !== undefined) rows.push(['После предобработки', r.clean_text || '(пусто после очистки)']);
+  if (r.tokens !== undefined) rows.push(['Токенов', `${r.tokens} из ${maxLen}` + (r.truncated ? ' (текст обрезан)' : '')]);
+  $('details').textContent = '';
+  for (const [k, v] of rows) {
+    const dt = document.createElement('dt'), dd = document.createElement('dd');
+    dt.textContent = k; dd.textContent = v;
+    $('details').append(dt, dd);
+  }
+  const hasMarks = (r.fragments || []).length > 0 && markFragments($('marked'), sentText, r.fragments);
+  $('marked-wrap').classList.toggle('hidden', !hasMarks);
+}
+
+function render(r) {
+  orig = r;
+  clearTimeout(whatIfTimer); whatIfSeq++;
+  $('result').classList.remove('hidden');
+  resetWhatIf();
+  renderScore(r);
+  renderWords(r.words);
+}
+
+function wordInfo(s) {
+  if (s.type === 'ignored') return `«${s.text}» не учитывается: ссылки, числа, эмодзи и знаки препинания удаляются при предобработке`;
+  if (s.impact == null) return `Для «${s.text}» влияние не рассчитано: оно считается для первых 60 слов`;
+  const without = pct(orig.probability - s.impact);
+  if (Math.abs(s.impact) < 0.005) return `«${s.text}» почти не влияет на оценку: без этого слова ${without}`;
+  const pp = (Math.abs(s.impact) * 100).toFixed(1).replace('.', ',');
+  return `«${s.text}» ${s.impact > 0 ? 'повышает' : 'понижает'} оценку на ${pp} п.п.: без этого слова ${without}`;
+}
+
+// Карта влияния слов: исходный текст по словам, цвет – насколько слово сдвигает вероятность кибербуллинга
+function renderWords(words) {
+  segments = words || [];
+  removed.clear();
+  const scored = segments.filter(s => s.type === 'word' && s.impact != null);
+  $('words-wrap').classList.toggle('hidden', !scored.length);
+  const box = $('words');
+  box.textContent = '';
+  // Насыщенность – относительно самого влиятельного слова, но не меньше 5 п.п., чтобы мелкие колебания не выглядели значимыми
+  const maxAbs = Math.max(0.05, ...scored.map(s => Math.abs(s.impact)));
+  segments.forEach((s, i) => {
+    if (s.type === 'space') return box.append(s.text);
+    const el = document.createElement(s.type === 'word' ? 'button' : 'span');
+    el.textContent = s.text;
+    if (s.type === 'word') {
+      el.type = 'button';
+      el.className = 'w';
+      el.setAttribute('aria-pressed', 'false');
+      if (s.impact != null && Math.abs(s.impact) >= 0.005) {
+        const share = Math.round(Math.min(1, Math.abs(s.impact) / maxAbs) * 55);
+        el.style.background = `color-mix(in srgb, var(${s.impact > 0 ? '--bad' : '--ok'}) ${share}%, transparent)`;
+      }
+      el.addEventListener('click', () => toggleWord(i, el));
+    } else {
+      el.className = 'w ign';
+      el.tabIndex = 0;
+    }
+    const show = () => { $('word-info').textContent = wordInfo(s); };
+    el.addEventListener('mouseenter', show);
+    el.addEventListener('focus', show);
+    el.addEventListener('mouseleave', () => { $('word-info').textContent = WORD_HINT; });
+    box.append(el);
+  });
+  $('word-info').textContent = WORD_HINT;
+}
+
+function toggleWord(i, el) {
+  const last = !removed.has(i) && segments.every((s, j) => s.type !== 'word' || j === i || removed.has(j));
+  if (last) { $('word-info').textContent = 'Хотя бы одно слово нужно оставить'; return; }
+  removed.has(i) ? removed.delete(i) : removed.add(i);
+  el.classList.toggle('off', removed.has(i));
+  el.setAttribute('aria-pressed', String(removed.has(i)));
+  updateWhatIf();
+}
+
+function resetWhatIf() {
+  $('pct-label').textContent = 'Вероятность кибербуллинга';
+  $('ghost').classList.add('hidden');
+  $('whatif').classList.add('hidden');
+}
+
+// Пересчет оценки без убранных слов; нажатия подряд объединяются в один запрос
+function updateWhatIf() {
+  clearTimeout(whatIfTimer);
+  const seq = ++whatIfSeq;
+  if (!removed.size) { resetWhatIf(); return renderScore(orig); }
+  $('whatif').classList.remove('hidden');
+  $('whatif-text').textContent = 'Пересчитываю…';
+  whatIfTimer = setTimeout(async () => {
+    const reduced = segments.filter((s, i) => !removed.has(i)).map(s => s.text).join('');
+    try {
+      const res = await fetch(API + '/api/predict', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: reduced, explain: false }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Не удалось пересчитать оценку');
+      if (seq !== whatIfSeq) return;
+      $('pct-label').textContent = 'Вероятность без убранных слов';
+      $('ghost').style.left = (orig.probability * 100) + '%';
+      $('ghost').classList.remove('hidden');
+      renderScore(data);
+      $('whatif-text').textContent = `Убрано слов: ${removed.size}. Исходный текст — ${pct(orig.probability)}, без них — ${pct(data.probability)}.`;
+    } catch (e) {
+      if (seq === whatIfSeq) $('whatif-text').textContent = e.message;
+    }
+  }, 300);
 }
 
 async function check() {
   if (checkBtn.disabled) return;
   checkBtn.disabled = true; checkBtn.textContent = 'Проверяю…'; showError('');
+  sentText = text.value;
   try {
     const res = await fetch(API + '/api/predict', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text.value }) });
     const data = await res.json();
@@ -211,6 +397,7 @@ text.addEventListener('input', updateButton);
 text.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) check(); });
 checkBtn.addEventListener('click', check);
 $('clear').addEventListener('click', () => { text.value = ''; $('result').classList.add('hidden'); showError(''); updateButton(); text.focus(); });
+$('restore').addEventListener('click', () => { renderWords(orig.words); updateWhatIf(); });
 document.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => { text.value = b.textContent; updateButton(); check(); }));
 pollStatus();
 </script>
