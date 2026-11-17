@@ -25,6 +25,7 @@
   header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
   h1 { font-size: 26px; line-height: 1.2; margin: 0 0 6px; letter-spacing: -.01em; }
   .sub { color: var(--muted); font-size: 14px; margin: 0; }
+  .org { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
   .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; background: var(--chip); color: var(--muted); }
   .pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
   .pill.loading .dot { animation: pulse 1s infinite ease-in-out; }
@@ -91,7 +92,8 @@
   <header>
     <div>
       <h1>Web-приложение для выявления кибербуллинга на основе моделей машинного обучения</h1>
-      <p class="sub" id="subtitle">Гибридная модель BERT + Multihead Self-Attention + CNN · проект AP23488900</p>
+      <p class="org">Международный университет туризма и гостеприимства</p>
+      <p class="sub" id="subtitle">Гибридная модель BERT + Multihead Self-Attention + CNN · проект AP23488900 «Автоматическое обнаружение кибербуллинга среди молодежи в социальных сетях с использованием искусственного интеллекта»</p>
     </div>
     <div id="status" class="pill loading"><span class="dot"></span><span id="status-text">Подключение…</span></div>
   </header>
